@@ -6,6 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import Icon from '@/components/ui/icon';
+import { toast } from '@/hooks/use-toast';
 
 export default function Index() {
   const [activeTab, setActiveTab] = useState('search');
@@ -15,6 +16,8 @@ export default function Index() {
     date: '',
     passengers: 1,
   });
+  const [bookedTickets, setBookedTickets] = useState<any[]>([]);
+  const [favorites, setFavorites] = useState<string[]>([]);
 
   const sampleFlights = [
     {
@@ -88,7 +91,10 @@ export default function Index() {
                 Профиль
               </Button>
             </nav>
-            <Button className="bg-gradient-to-r from-primary to-secondary">
+            <Button 
+              className="bg-gradient-to-r from-primary to-secondary"
+              onClick={() => setActiveTab('profile')}
+            >
               <Icon name="User" size={20} />
             </Button>
           </div>
@@ -171,6 +177,20 @@ export default function Index() {
                 <Button
                   size="lg"
                   className="w-full h-14 text-lg bg-gradient-to-r from-primary to-secondary hover:opacity-90"
+                  onClick={() => {
+                    if (!searchForm.from || !searchForm.to || !searchForm.date) {
+                      toast({
+                        title: 'Заполните все поля',
+                        description: 'Укажите город вылета, прилёта и дату',
+                        variant: 'destructive',
+                      });
+                      return;
+                    }
+                    toast({
+                      title: 'Поиск выполнен',
+                      description: `Найдено ${sampleFlights.length} рейсов`,
+                    });
+                  }}
                 >
                   <Icon name="Search" size={20} />
                   Найти билеты
@@ -226,7 +246,17 @@ export default function Index() {
                             </p>
                             <p className="text-sm text-muted-foreground">за пассажира</p>
                           </div>
-                          <Button className="w-full md:w-auto bg-gradient-to-r from-primary to-secondary">
+                          <Button 
+                            className="w-full md:w-auto bg-gradient-to-r from-primary to-secondary"
+                            onClick={() => {
+                              setBookedTickets([...bookedTickets, flight]);
+                              toast({
+                                title: 'Рейс забронирован!',
+                                description: `${flight.airline} ${flight.from} → ${flight.to}`,
+                              });
+                              setActiveTab('tickets');
+                            }}
+                          >
                             Выбрать рейс
                           </Button>
                         </div>
@@ -247,22 +277,72 @@ export default function Index() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-12">
-                  <div className="w-20 h-20 rounded-full bg-muted mx-auto mb-4 flex items-center justify-center">
-                    <Icon name="Ticket" size={40} className="text-muted-foreground" />
+                {bookedTickets.length === 0 ? (
+                  <div className="text-center py-12">
+                    <div className="w-20 h-20 rounded-full bg-muted mx-auto mb-4 flex items-center justify-center">
+                      <Icon name="Ticket" size={40} className="text-muted-foreground" />
+                    </div>
+                    <h3 className="text-xl font-semibold mb-2">Билетов пока нет</h3>
+                    <p className="text-muted-foreground mb-6">
+                      Забронируйте первый рейс и он появится здесь
+                    </p>
+                    <Button
+                      onClick={() => setActiveTab('search')}
+                      className="bg-gradient-to-r from-primary to-secondary"
+                    >
+                      <Icon name="Search" size={20} />
+                      Найти билеты
+                    </Button>
                   </div>
-                  <h3 className="text-xl font-semibold mb-2">Билетов пока нет</h3>
-                  <p className="text-muted-foreground mb-6">
-                    Забронируйте первый рейс и он появится здесь
-                  </p>
-                  <Button
-                    onClick={() => setActiveTab('search')}
-                    className="bg-gradient-to-r from-primary to-secondary"
-                  >
-                    <Icon name="Search" size={20} />
-                    Найти билеты
-                  </Button>
-                </div>
+                ) : (
+                  <div className="space-y-4">
+                    {bookedTickets.map((ticket, index) => (
+                      <Card key={index} className="border-2 border-primary/20">
+                        <CardContent className="p-6">
+                          <div className="flex items-center justify-between mb-4">
+                            <Badge className="bg-gradient-to-r from-primary to-secondary text-white">Активный</Badge>
+                            <Button 
+                              size="sm" 
+                              variant="ghost"
+                              onClick={() => {
+                                setBookedTickets(bookedTickets.filter((_, i) => i !== index));
+                                toast({
+                                  title: 'Билет отменён',
+                                  description: 'Бронирование успешно отменено',
+                                });
+                              }}
+                            >
+                              <Icon name="X" size={16} />
+                            </Button>
+                          </div>
+                          <div className="flex items-center gap-3 mb-4">
+                            <div className="w-12 h-12 rounded-lg bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center">
+                              <Icon name="Plane" className="text-primary" size={24} />
+                            </div>
+                            <div>
+                              <p className="font-semibold text-lg">{ticket.airline}</p>
+                              <p className="text-sm text-muted-foreground">{ticket.type}</p>
+                            </div>
+                          </div>
+                          <div className="grid grid-cols-3 gap-4 items-center">
+                            <div>
+                              <p className="text-2xl font-bold">{ticket.departure}</p>
+                              <p className="text-sm text-muted-foreground">{ticket.from}</p>
+                            </div>
+                            <div className="text-center">
+                              <Icon name="ArrowRight" className="mx-auto text-muted-foreground" size={24} />
+                              <p className="text-xs text-muted-foreground mt-1">{ticket.duration}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="text-2xl font-bold">{ticket.arrival}</p>
+                              <p className="text-sm text-muted-foreground">{ticket.to}</p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -281,7 +361,16 @@ export default function Index() {
                       <h3 className="text-xl font-bold">Иван Петров</h3>
                       <p className="text-muted-foreground">ivan@example.com</p>
                     </div>
-                    <Button variant="outline" className="w-full">
+                    <Button 
+                      variant="outline" 
+                      className="w-full"
+                      onClick={() => {
+                        toast({
+                          title: 'Настройки профиля',
+                          description: 'Функция в разработке',
+                        });
+                      }}
+                    >
                       <Icon name="Settings" size={16} />
                       Настройки
                     </Button>
@@ -314,7 +403,23 @@ export default function Index() {
                             </p>
                           </div>
                         </div>
-                        <Button size="sm" variant="ghost">
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => {
+                            setSearchForm({
+                              from: route.from,
+                              to: route.to,
+                              date: '',
+                              passengers: 1,
+                            });
+                            setActiveTab('search');
+                            toast({
+                              title: 'Маршрут загружен',
+                              description: `${route.from} → ${route.to}`,
+                            });
+                          }}
+                        >
                           <Icon name="Search" size={16} />
                         </Button>
                       </div>
@@ -349,7 +454,23 @@ export default function Index() {
                             </p>
                           </div>
                         </div>
-                        <Button size="sm" variant="outline">
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => {
+                            setSearchForm({
+                              from: search.from,
+                              to: search.to,
+                              date: search.date,
+                              passengers: search.passengers,
+                            });
+                            setActiveTab('search');
+                            toast({
+                              title: 'Поиск повторён',
+                              description: `${search.from} → ${search.to}`,
+                            });
+                          }}
+                        >
                           <Icon name="RotateCcw" size={16} />
                           Повторить поиск
                         </Button>
